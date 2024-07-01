@@ -1,4 +1,4 @@
-namespace Disclone.API.DTOs;
+namespace Disclone.API.DTOs.Auth;
 
 public class CredentialsDTO
 {

@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Disclone.API.DTOs;
+namespace Disclone.API.DTOs.Auth;
 
 public class RegisterDTO
 {
-    [Required(ErrorMessage = "UserName is required.")]
+    [Required(ErrorMessage = "Username is required.")]
     public required string UserName { get; set; }
 
     [EmailAddress]

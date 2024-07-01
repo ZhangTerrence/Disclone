@@ -1,4 +1,4 @@
-using Disclone.API.DTOs;
+using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Disclone.API.Controllers;
 
 [ApiController]
-[Route("api/token")]
+[Route("/api/token")]
 public class TokenController : ControllerBase
 {
     private readonly ITokenService _tokenService;
@@ -46,7 +46,7 @@ public class TokenController : ControllerBase
             {
                 return NotFound("User not found.");
             }
-            Console.WriteLine((user.RefreshToken, refreshToken));
+
             if (user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
             {
                 return Forbid();
@@ -78,7 +78,7 @@ public class TokenController : ControllerBase
 
             await _userManager.UpdateAsync(user);
 
-            return Ok(new AuthResponseDTO
+            return Ok(new CredentialsDTO
             {
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken
@@ -101,7 +101,7 @@ public class TokenController : ControllerBase
             {
                 return Unauthorized("Unauthorized.");
             }
-            
+
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {

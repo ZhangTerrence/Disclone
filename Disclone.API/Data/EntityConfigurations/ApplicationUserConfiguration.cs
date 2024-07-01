@@ -8,7 +8,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 {
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
-        // Configures properties
+        // Configures properties.
         builder.Property(e => e.Id).HasColumnName("UserId");
         builder.Property(e => e.UserName).IsRequired().HasMaxLength(31);
         builder.Property(e => e.About).IsRequired().HasDefaultValue("").HasMaxLength(255);

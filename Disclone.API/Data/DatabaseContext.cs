@@ -23,7 +23,7 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<G
         builder.Entity<IdentityUserLogin<Guid>>(e => e.ToTable("UserLogins"));
         builder.Entity<IdentityUserToken<Guid>>(e => e.ToTable("UserTokens"));
         builder.Entity<IdentityRoleClaim<Guid>>(e => e.ToTable("RoleClaims"));
-        
+
         builder.Entity<IdentityRole<Guid>>().HasData([
             new IdentityRole<Guid>
             {
@@ -38,7 +38,8 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<G
                 NormalizedName = "ADMIN"
             }
         ]);
-        
+
         new ApplicationUserConfiguration().Configure(builder.Entity<ApplicationUser>());
+        new FriendshipConfiguration().Configure(builder.Entity<Friendship>());
     }
 }
