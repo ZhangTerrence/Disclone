@@ -59,6 +59,7 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddControllers();

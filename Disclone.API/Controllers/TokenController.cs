@@ -1,8 +1,6 @@
 using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
-using Disclone.API.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Disclone.API.Controllers;
@@ -12,11 +10,11 @@ namespace Disclone.API.Controllers;
 public class TokenController : ControllerBase
 {
     private readonly ITokenService _tokenService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IUserService _userService;
 
-    public TokenController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+    public TokenController(IUserService userService, ITokenService tokenService)
     {
-        _userManager = userManager;
+        _userService = userService;
         _tokenService = tokenService;
     }
 
@@ -36,12 +34,12 @@ public class TokenController : ControllerBase
             var refreshToken = body.RefreshToken;
 
             var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
-            if (principal.Identity?.Name is null)
+            if (principal?.Identity?.Name is null)
             {
                 return Unauthorized("Unauthorized.");
             }
 
-            var user = await _userManager.FindByNameAsync(principal.Identity.Name);
+            var user = await _userService.FindByName(principal.Identity.Name);
             if (user is null)
             {
                 return NotFound("User not found.");
@@ -54,29 +52,16 @@ public class TokenController : ControllerBase
 
             var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
-
-            HttpContext.Response.Cookies.Append("Access", newAccessToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddHours(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true
-            });
-            HttpContext.Response.Cookies.Append("Refresh", newRefreshToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddDays(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true,
-                Path = "/api/token/refresh"
-            });
+            _tokenService.GenerateBothCookies(HttpContext, newAccessToken, newRefreshToken);
 
             user.RefreshToken = newRefreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            await _userManager.UpdateAsync(user);
+            var savedUser = await _userService.SaveUpdatedUser(user);
+            if (!savedUser)
+            {
+                return StatusCode(500, "Unable to save user.");
+            }
 
             return Ok(new CredentialsDTO
             {
@@ -102,7 +87,7 @@ public class TokenController : ControllerBase
                 return Unauthorized("Unauthorized.");
             }
 
-            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+            var user = await _userService.FindByName(User.Identity.Name);
             if (user is null)
             {
                 return NotFound("User not found.");
@@ -111,7 +96,11 @@ public class TokenController : ControllerBase
             user.RefreshToken = null;
             user.RefreshTokenExpiryTime = null;
 
-            await _userManager.UpdateAsync(user);
+            var savedUser = await _userService.SaveUpdatedUser(user);
+            if (!savedUser)
+            {
+                return StatusCode(500, "Unable to save user.");
+            }
 
             return NoContent();
         }

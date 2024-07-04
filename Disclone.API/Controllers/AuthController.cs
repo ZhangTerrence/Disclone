@@ -3,9 +3,7 @@ using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Disclone.API.Controllers;
 
@@ -14,16 +12,14 @@ namespace Disclone.API.Controllers;
 [Route("/api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ITokenService _tokenService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IUserService _userService;
 
-    public AuthController(ITokenService tokenService, UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+
+    public AuthController(IUserService userService, ITokenService tokenService)
     {
-        _userManager = userManager;
+        _userService = userService;
         _tokenService = tokenService;
-        _signInManager = signInManager;
     }
 
     [HttpPost]
@@ -37,10 +33,10 @@ public class AuthController : ControllerBase
                 return BadRequest(body);
             }
 
-            var userExists = await _userManager.FindByNameAsync(body.UserName);
+            var userExists = await _userService.FindByName(body.UserName);
             if (userExists is not null)
             {
-                return BadRequest("UserName already taken.");
+                return BadRequest("Username has already been taken.");
             }
 
             var user = new ApplicationUser
@@ -52,16 +48,16 @@ public class AuthController : ControllerBase
                 DateModified = DateTime.Now.ToUniversalTime()
             };
 
-            var registeredUser = await _userManager.CreateAsync(user, body.Password);
-            if (!registeredUser.Succeeded)
+            var createdUser = await _userService.CreateUser(user, body.Password);
+            if (!createdUser)
             {
-                return StatusCode(500, registeredUser.Errors);
+                return StatusCode(500, "Unable to create a new user.");
             }
 
-            var registeredRole = await _userManager.AddToRoleAsync(user, "User");
-            if (!registeredRole.Succeeded)
+            var assignedUser = await _userService.AssignUser(user, "User");
+            if (!assignedUser)
             {
-                return StatusCode(500, registeredRole.Errors);
+                return StatusCode(500, "Unable to assign user to USER role.");
             }
 
             var accessToken = _tokenService.GenerateAccessToken(new List<Claim>
@@ -70,29 +66,16 @@ public class AuthController : ControllerBase
                 new(ClaimTypes.Role, "User")
             });
             var refreshToken = _tokenService.GenerateRefreshToken();
-
-            HttpContext.Response.Cookies.Append("Access", accessToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddHours(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true
-            });
-            HttpContext.Response.Cookies.Append("Refresh", refreshToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddDays(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true,
-                Path = "/api/token/refresh"
-            });
+            _tokenService.GenerateBothCookies(HttpContext, accessToken, refreshToken);
 
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            await _userManager.UpdateAsync(user);
+            var savedUser = await _userService.SaveUpdatedUser(user);
+            if (!savedUser)
+            {
+                return StatusCode(500, "Unable to save user.");
+            }
 
             return Ok(new CredentialsDTO
             {
@@ -117,15 +100,14 @@ public class AuthController : ControllerBase
                 return BadRequest(body);
             }
 
-            var user = await _userManager.Users.FirstOrDefaultAsync(user =>
-                user.UserName!.ToLower() == body.UserName.ToLower());
+            var user = await _userService.FindByName(body.UserName);
             if (user is null)
             {
                 return NotFound("User not found");
             }
 
-            var validCredentials = await _signInManager.CheckPasswordSignInAsync(user, body.Password, false);
-            if (!validCredentials.Succeeded)
+            var validatedCredentials = await _userService.ValidateCredentials(user, body.Password);
+            if (!validatedCredentials)
             {
                 return Unauthorized("Invalid username or password.");
             }
@@ -136,29 +118,16 @@ public class AuthController : ControllerBase
                 new(ClaimTypes.Role, "User")
             });
             var refreshToken = _tokenService.GenerateRefreshToken();
-
-            HttpContext.Response.Cookies.Append("Access", accessToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddHours(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true
-            });
-            HttpContext.Response.Cookies.Append("Refresh", refreshToken, new CookieOptions
-            {
-                Expires = DateTime.Now.AddDays(1),
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true,
-                IsEssential = true,
-                Path = "/api/token/refresh"
-            });
+            _tokenService.GenerateBothCookies(HttpContext, accessToken, refreshToken);
 
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            await _userManager.UpdateAsync(user);
+            var savedUser = await _userService.SaveUpdatedUser(user);
+            if (!savedUser)
+            {
+                return StatusCode(500, "Unable to save user.");
+            }
 
             return Ok(new CredentialsDTO
             {

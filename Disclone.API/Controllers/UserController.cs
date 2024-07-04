@@ -1,9 +1,7 @@
 using Disclone.API.DTOs.User;
-using Disclone.API.Models;
+using Disclone.API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Disclone.API.Controllers;
 
@@ -11,11 +9,11 @@ namespace Disclone.API.Controllers;
 [Route("/api/user")]
 public class UserController : ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IUserService _userService;
 
-    public UserController(UserManager<ApplicationUser> userManager)
+    public UserController(IUserService userService)
     {
-        _userManager = userManager;
+        _userService = userService;
     }
 
     [HttpGet]
@@ -24,7 +22,7 @@ public class UserController : ControllerBase
     {
         try
         {
-            var users = await _userManager.Users.ToListAsync();
+            var users = await _userService.GetUsers();
             return Ok(users);
         }
         catch (Exception e)
@@ -37,38 +35,7 @@ public class UserController : ControllerBase
     [Route("friend/request")]
     public async Task<IActionResult> SendFriendRequest([FromBody] FriendshipDTO body)
     {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(body);
-            }
-
-            var requester = await _userManager.FindByIdAsync(body.RequesterId);
-            if (requester is null)
-            {
-                return NotFound("Requester not found");
-            }
-            
-            var requestee = await _userManager.FindByIdAsync(body.RequesteeId);
-            if (requestee is null)
-            {
-                return NotFound("Requestee not found");
-            }
-
-            var friendship = new NewFriendshipDTO
-            {
-                UserAId = requester.Id,
-                UserBId = requestee.Id,
-                Status = FriendshipStatus.PENDING
-            };
-            
-            return Ok();
-        }
-        catch (Exception e)
-        {
-            return StatusCode(500, e.Message);
-        }
+        throw new NotImplementedException();
     }
 
     [HttpPatch]

@@ -43,7 +43,7 @@ public class TokenService : ITokenService
         return Convert.ToBase64String(randomNumber);
     }
 
-    public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
+    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
@@ -53,7 +53,7 @@ public class TokenService : ITokenService
             ValidateIssuerSigningKey = true,
             ValidIssuer = _configuration["Jwt:Issuer"],
             ValidAudience = _configuration["Jwt:Audience"],
-            IssuerSigningKey = _securityKey,
+            IssuerSigningKey = _securityKey
         };
         var tokenHandler = new JwtSecurityTokenHandler();
         var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
@@ -62,9 +62,30 @@ public class TokenService : ITokenService
         if (jwtSecurityToken is null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512,
                 StringComparison.InvariantCultureIgnoreCase))
         {
-            throw new SecurityTokenException("Invalid token.");
+            return null;
         }
 
         return principal;
+    }
+
+    public void GenerateBothCookies(HttpContext httpContext, string accessToken, string refreshToken)
+    {
+        httpContext.Response.Cookies.Append("Access", accessToken, new CookieOptions
+        {
+            Expires = DateTime.Now.AddHours(1),
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            HttpOnly = true,
+            IsEssential = true
+        });
+        httpContext.Response.Cookies.Append("Refresh", refreshToken, new CookieOptions
+        {
+            Expires = DateTime.Now.AddDays(1),
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            HttpOnly = true,
+            IsEssential = true,
+            Path = "/api/token/refresh"
+        });
     }
 }

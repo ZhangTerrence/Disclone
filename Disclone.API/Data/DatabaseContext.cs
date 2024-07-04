@@ -12,6 +12,8 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     {
     }
 
+    public DbSet<Friendship> Friendships { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
