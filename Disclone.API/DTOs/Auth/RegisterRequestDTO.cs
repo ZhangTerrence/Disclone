@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Disclone.API.DTOs.Auth;
 
-public class RegisterDTO
+public record RegisterRequestDTO
 {
     [Required(ErrorMessage = "Username is required.")]
     public required string UserName { get; set; }

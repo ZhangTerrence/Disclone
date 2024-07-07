@@ -1,3 +1,4 @@
+using Disclone.API.DTOs;
 using Disclone.API.DTOs.User;
 using Disclone.API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,13 +28,19 @@ public class UserController : ControllerBase
         }
         catch (Exception e)
         {
-            return StatusCode(500, e.Message);
+            return StatusCode(500, new ErrorResponseDTO
+            {
+                Errors = new Dictionary<string, IEnumerable<string>>
+                {
+                    { e.Source ?? "UnknownSource", [e.Message] }
+                }
+            });
         }
     }
 
     [HttpPost]
     [Route("friend/request")]
-    public async Task<IActionResult> SendFriendRequest([FromBody] FriendshipDTO body)
+    public async Task<IActionResult> SendFriendRequest([FromBody] FriendshipRequestDTO body)
     {
         throw new NotImplementedException();
     }

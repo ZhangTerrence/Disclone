@@ -30,6 +30,11 @@ public class UserService : IUserService
     public async Task<bool> CreateUser(ApplicationUser user, string password)
     {
         var createdUser = await _userManager.CreateAsync(user, password);
+        foreach (var e in createdUser.Errors.Select(e => e.Description))
+        {
+            Console.WriteLine(e);
+        }
+
         return createdUser.Succeeded;
     }
 

@@ -1,3 +1,4 @@
+using Disclone.API.DTOs;
 using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -19,30 +20,33 @@ public class TokenController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
+    [Authorize]
     [Route("refresh")]
-    public async Task<IActionResult> RefreshToken([FromBody] CredentialsDTO body)
+    public async Task<IActionResult> RefreshToken()
     {
         try
         {
-            if (!ModelState.IsValid)
+            if (User.Identity?.Name is null)
             {
-                return BadRequest(body);
+                return Unauthorized();
             }
-
-            var accessToken = body.AccessToken;
-            var refreshToken = body.RefreshToken;
-
-            var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
-            if (principal?.Identity?.Name is null)
+            
+            
+            if (HttpContext.Items["Refresh"] is not string refreshToken)
             {
-                return Unauthorized("Unauthorized.");
+                return Unauthorized();
             }
-
-            var user = await _userService.FindByName(principal.Identity.Name);
+            
+            var user = await _userService.FindByName(User.Identity.Name);
             if (user is null)
             {
-                return NotFound("User not found.");
+                return NotFound(new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "FindByName", ["User not found."] }
+                    }
+                });
             }
 
             if (user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
@@ -50,9 +54,9 @@ public class TokenController : ControllerBase
                 return Forbid();
             }
 
-            var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims);
+            var newAccessToken = _tokenService.GenerateAccessToken(User.Claims);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
-            _tokenService.GenerateBothCookies(HttpContext, newAccessToken, newRefreshToken);
+            _tokenService.GenerateCookiesFromTokens(HttpContext, newAccessToken, newRefreshToken);
 
             user.RefreshToken = newRefreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
@@ -60,10 +64,16 @@ public class TokenController : ControllerBase
             var savedUser = await _userService.SaveUpdatedUser(user);
             if (!savedUser)
             {
-                return StatusCode(500, "Unable to save user.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "SaveUpdatedUser", ["Unable to save user."] }
+                    }
+                });
             }
 
-            return Ok(new CredentialsDTO
+            return Ok(new CredentialsResponseDTO
             {
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken
@@ -71,7 +81,13 @@ public class TokenController : ControllerBase
         }
         catch (Exception e)
         {
-            return StatusCode(500, e.Message);
+            return StatusCode(500, new ErrorResponseDTO
+            {
+                Errors = new Dictionary<string, IEnumerable<string>>
+                {
+                    { e.Source ?? "UnknownSource", [e.Message] }
+                }
+            });
         }
     }
 
@@ -84,13 +100,19 @@ public class TokenController : ControllerBase
         {
             if (User.Identity?.Name is null)
             {
-                return Unauthorized("Unauthorized.");
+                return Unauthorized();
             }
 
             var user = await _userService.FindByName(User.Identity.Name);
             if (user is null)
             {
-                return NotFound("User not found.");
+                return NotFound(new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "FindByName", ["User not found."] }
+                    }
+                });
             }
 
             user.RefreshToken = null;
@@ -99,14 +121,26 @@ public class TokenController : ControllerBase
             var savedUser = await _userService.SaveUpdatedUser(user);
             if (!savedUser)
             {
-                return StatusCode(500, "Unable to save user.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "SaveUpdatedUser", ["Unable to save user."] }
+                    }
+                });
             }
 
             return NoContent();
         }
         catch (Exception e)
         {
-            return StatusCode(500, e.Message);
+            return StatusCode(500, new ErrorResponseDTO
+            {
+                Errors = new Dictionary<string, IEnumerable<string>>
+                {
+                    { e.Source ?? "UnknownSource", [e.Message] }
+                }
+            });
         }
     }
 }

@@ -43,32 +43,7 @@ public class TokenService : ITokenService
         return Convert.ToBase64String(randomNumber);
     }
 
-    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
-    {
-        var tokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = _configuration["Jwt:Issuer"],
-            ValidAudience = _configuration["Jwt:Audience"],
-            IssuerSigningKey = _securityKey
-        };
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
-
-        var jwtSecurityToken = securityToken as JwtSecurityToken;
-        if (jwtSecurityToken is null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512,
-                StringComparison.InvariantCultureIgnoreCase))
-        {
-            return null;
-        }
-
-        return principal;
-    }
-
-    public void GenerateBothCookies(HttpContext httpContext, string accessToken, string refreshToken)
+    public void GenerateCookiesFromTokens(HttpContext httpContext, string accessToken, string refreshToken)
     {
         httpContext.Response.Cookies.Append("Access", accessToken, new CookieOptions
         {

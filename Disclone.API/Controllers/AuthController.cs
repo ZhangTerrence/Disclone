@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Disclone.API.DTOs;
 using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
@@ -15,7 +16,6 @@ public class AuthController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IUserService _userService;
 
-
     public AuthController(IUserService userService, ITokenService tokenService)
     {
         _userService = userService;
@@ -24,19 +24,25 @@ public class AuthController : ControllerBase
 
     [HttpPost]
     [Route("register")]
-    public async Task<IActionResult> RegisterUser([FromBody] RegisterDTO body)
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterRequestDTO body)
     {
         try
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(body);
+                return BadRequest();
             }
 
             var userExists = await _userService.FindByName(body.UserName);
             if (userExists is not null)
             {
-                return BadRequest("Username has already been taken.");
+                return BadRequest(new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "FindByName", ["Username has already been taken."] }
+                    }
+                });
             }
 
             var user = new ApplicationUser
@@ -51,13 +57,25 @@ public class AuthController : ControllerBase
             var createdUser = await _userService.CreateUser(user, body.Password);
             if (!createdUser)
             {
-                return StatusCode(500, "Unable to create a new user.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "CreateUser", ["Unable to create a new user."] }
+                    }
+                });
             }
 
             var assignedUser = await _userService.AssignUser(user, "User");
             if (!assignedUser)
             {
-                return StatusCode(500, "Unable to assign user to USER role.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "AssignUser", ["Unable to assign user to USER role."] }
+                    }
+                });
             }
 
             var accessToken = _tokenService.GenerateAccessToken(new List<Claim>
@@ -66,7 +84,7 @@ public class AuthController : ControllerBase
                 new(ClaimTypes.Role, "User")
             });
             var refreshToken = _tokenService.GenerateRefreshToken();
-            _tokenService.GenerateBothCookies(HttpContext, accessToken, refreshToken);
+            _tokenService.GenerateCookiesFromTokens(HttpContext, accessToken, refreshToken);
 
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
@@ -74,10 +92,16 @@ public class AuthController : ControllerBase
             var savedUser = await _userService.SaveUpdatedUser(user);
             if (!savedUser)
             {
-                return StatusCode(500, "Unable to save user.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "SaveUpdatedUser", ["Unable to save user."] }
+                    }
+                });
             }
 
-            return Ok(new CredentialsDTO
+            return Ok(new CredentialsResponseDTO
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
@@ -85,31 +109,49 @@ public class AuthController : ControllerBase
         }
         catch (Exception e)
         {
-            return StatusCode(500, e.Message);
+            return StatusCode(500, new ErrorResponseDTO
+            {
+                Errors = new Dictionary<string, IEnumerable<string>>
+                {
+                    { e.Source ?? "UnknownSource", [e.Message] }
+                }
+            });
         }
     }
 
     [HttpPost]
     [Route("login")]
-    public async Task<IActionResult> LoginUser([FromBody] LoginDTO body)
+    public async Task<IActionResult> LoginUser([FromBody] LoginRequestDTO body)
     {
         try
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(body);
+                return BadRequest();
             }
 
             var user = await _userService.FindByName(body.UserName);
             if (user is null)
             {
-                return NotFound("User not found");
+                return NotFound(new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "FindByName", ["User not found"] } 
+                    }
+                });
             }
 
             var validatedCredentials = await _userService.ValidateCredentials(user, body.Password);
             if (!validatedCredentials)
             {
-                return Unauthorized("Invalid username or password.");
+                return Unauthorized(new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "ValidateCredentials", ["Invalid username or password."] }
+                    }
+                });
             }
 
             var accessToken = _tokenService.GenerateAccessToken(new List<Claim>
@@ -118,7 +160,7 @@ public class AuthController : ControllerBase
                 new(ClaimTypes.Role, "User")
             });
             var refreshToken = _tokenService.GenerateRefreshToken();
-            _tokenService.GenerateBothCookies(HttpContext, accessToken, refreshToken);
+            _tokenService.GenerateCookiesFromTokens(HttpContext, accessToken, refreshToken);
 
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
@@ -126,10 +168,16 @@ public class AuthController : ControllerBase
             var savedUser = await _userService.SaveUpdatedUser(user);
             if (!savedUser)
             {
-                return StatusCode(500, "Unable to save user.");
+                return StatusCode(500, new ErrorResponseDTO
+                {
+                    Errors = new Dictionary<string, IEnumerable<string>>
+                    {
+                        { "SaveUpdatedUser", ["Unable to save user."] }
+                    }
+                });
             }
 
-            return Ok(new CredentialsDTO
+            return Ok(new CredentialsResponseDTO
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
@@ -137,7 +185,13 @@ public class AuthController : ControllerBase
         }
         catch (Exception e)
         {
-            return StatusCode(500, e.Message);
+            return StatusCode(500, new ErrorResponseDTO
+            {
+                Errors = new Dictionary<string, IEnumerable<string>>
+                {
+                    { e.Source ?? "UnknownSource", [e.Message] }
+                }
+            });
         }
     }
 }

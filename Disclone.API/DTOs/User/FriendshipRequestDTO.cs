@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Disclone.API.DTOs.User;
 
-public class FriendshipDTO
+public record FriendshipRequestDTO
 {
     [Required(ErrorMessage = "Requester id is required.")]
     public required string RequesterId { get; set; }

@@ -1,10 +1,13 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Disclone.API.Data;
+using Disclone.API.DTOs;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
 using Disclone.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -53,7 +56,12 @@ builder.Services.AddAuthentication(options =>
         {
             OnMessageReceived = context =>
             {
-                context.Token = context.Request.Cookies["Access"];
+                var accessToken = context.Request.Cookies["Access"];
+                var refreshToken = context.Request.Cookies["Refresh"];
+
+                context.Token = accessToken;
+                context.HttpContext.Items.Add("Refresh", refreshToken);
+
                 return Task.CompletedTask;
             }
         };
@@ -62,7 +70,14 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
+{
+    options.InvalidModelStateResponseFactory = context => new BadRequestObjectResult(new ErrorResponseDTO
+    {
+        Errors = context.ModelState.ToDictionary(kv => kv.Key,
+            kv => kv.Value is null ? [] : kv.Value.Errors.Select(e => e.ErrorMessage))
+    });
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

@@ -6,6 +6,5 @@ public interface ITokenService
 {
     string GenerateAccessToken(IEnumerable<Claim> claims);
     string GenerateRefreshToken();
-    ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
-    void GenerateBothCookies(HttpContext httpContext, string accessToken, string refreshToken);
+    void GenerateCookiesFromTokens(HttpContext httpContext, string accessToken, string refreshToken);
 }
