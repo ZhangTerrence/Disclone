@@ -4,6 +4,7 @@ using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Disclone.API.Controllers;
@@ -13,12 +14,12 @@ namespace Disclone.API.Controllers;
 [Route("/api/auth")]
 public class AuthController : ControllerBase
 {
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
-    private readonly IUserService _userService;
 
-    public AuthController(IUserService userService, ITokenService tokenService)
+    public AuthController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
     {
-        _userService = userService;
+        _userManager = userManager;
         _tokenService = tokenService;
     }
 
@@ -32,8 +33,8 @@ public class AuthController : ControllerBase
             {
                 return BadRequest();
             }
-
-            var userExists = await _userService.FindByName(body.UserName);
+ 
+            var userExists = await _userManager.FindByNameAsync(body.UserName);
             if (userExists is not null)
             {
                 return BadRequest(new ErrorResponseDTO
@@ -54,26 +55,26 @@ public class AuthController : ControllerBase
                 DateModified = DateTime.Now.ToUniversalTime()
             };
 
-            var createdUser = await _userService.CreateUser(user, body.Password);
-            if (!createdUser)
+            var createdUser = await _userManager.CreateAsync(user, body.Password);
+            if (!createdUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "CreateUser", ["Unable to create a new user."] }
+                        { "CreateUser", createdUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
 
-            var assignedUser = await _userService.AssignUser(user, "User");
-            if (!assignedUser)
+            var assignedUser = await _userManager.AddToRoleAsync(user, "User");
+            if (!assignedUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "AssignUser", ["Unable to assign user to USER role."] }
+                        { "AssignUser", assignedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -89,14 +90,14 @@ public class AuthController : ControllerBase
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            var savedUser = await _userService.SaveUpdatedUser(user);
-            if (!savedUser)
+            var savedUser = await _userManager.UpdateAsync(user);
+            if (!savedUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", ["Unable to save user."] }
+                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -130,7 +131,7 @@ public class AuthController : ControllerBase
                 return BadRequest();
             }
 
-            var user = await _userService.FindByName(body.UserName);
+            var user = await _userManager.FindByNameAsync(body.UserName);
             if (user is null)
             {
                 return NotFound(new ErrorResponseDTO
@@ -142,7 +143,7 @@ public class AuthController : ControllerBase
                 });
             }
 
-            var validatedCredentials = await _userService.ValidateCredentials(user, body.Password);
+            var validatedCredentials = await _userManager.CheckPasswordAsync(user, body.Password);
             if (!validatedCredentials)
             {
                 return Unauthorized(new ErrorResponseDTO
@@ -165,14 +166,14 @@ public class AuthController : ControllerBase
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            var savedUser = await _userService.SaveUpdatedUser(user);
-            if (!savedUser)
+            var savedUser = await _userManager.UpdateAsync(user);
+            if (!savedUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", ["Unable to save user."] }
+                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }

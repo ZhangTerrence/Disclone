@@ -1,7 +1,9 @@
 using Disclone.API.DTOs;
 using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
+using Disclone.API.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Disclone.API.Controllers;
@@ -10,12 +12,12 @@ namespace Disclone.API.Controllers;
 [Route("/api/token")]
 public class TokenController : ControllerBase
 {
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
-    private readonly IUserService _userService;
 
-    public TokenController(IUserService userService, ITokenService tokenService)
+    public TokenController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
     {
-        _userService = userService;
+        _userManager = userManager;
         _tokenService = tokenService;
     }
 
@@ -37,7 +39,7 @@ public class TokenController : ControllerBase
                 return Unauthorized();
             }
             
-            var user = await _userService.FindByName(User.Identity.Name);
+            var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
                 return NotFound(new ErrorResponseDTO
@@ -61,14 +63,14 @@ public class TokenController : ControllerBase
             user.RefreshToken = newRefreshToken;
             user.RefreshTokenExpiryTime = DateTime.Now.AddDays(1).ToUniversalTime();
 
-            var savedUser = await _userService.SaveUpdatedUser(user);
-            if (!savedUser)
+            var savedUser = await _userManager.UpdateAsync(user);
+            if (!savedUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", ["Unable to save user."] }
+                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -103,7 +105,7 @@ public class TokenController : ControllerBase
                 return Unauthorized();
             }
 
-            var user = await _userService.FindByName(User.Identity.Name);
+            var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
                 return NotFound(new ErrorResponseDTO
@@ -118,14 +120,14 @@ public class TokenController : ControllerBase
             user.RefreshToken = null;
             user.RefreshTokenExpiryTime = null;
 
-            var savedUser = await _userService.SaveUpdatedUser(user);
-            if (!savedUser)
+            var savedUser = await _userManager.UpdateAsync(user);
+            if (!savedUser.Succeeded)
             {
                 return StatusCode(500, new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", ["Unable to save user."] }
+                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }

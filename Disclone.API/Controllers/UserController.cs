@@ -10,11 +10,11 @@ namespace Disclone.API.Controllers;
 [Route("/api/user")]
 public class UserController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
 
-    public UserController(IUserService userService)
+    public UserController(IUserRepository userRepository)
     {
-        _userService = userService;
+        _userRepository = userRepository;
     }
 
     [HttpGet]
@@ -23,7 +23,7 @@ public class UserController : ControllerBase
     {
         try
         {
-            var users = await _userService.GetUsers();
+            var users = await _userRepository.GetUsers();
             return Ok(users);
         }
         catch (Exception e)
