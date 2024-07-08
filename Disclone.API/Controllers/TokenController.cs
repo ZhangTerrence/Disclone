@@ -12,8 +12,8 @@ namespace Disclone.API.Controllers;
 [Route("/api/token")]
 public class TokenController : ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public TokenController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
     {
@@ -22,7 +22,7 @@ public class TokenController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Roles = "User, Admin")]
     [Route("refresh")]
     public async Task<IActionResult> RefreshToken()
     {
@@ -33,12 +33,11 @@ public class TokenController : ControllerBase
                 return Unauthorized();
             }
             
-            
             if (HttpContext.Items["Refresh"] is not string refreshToken)
             {
                 return Unauthorized();
             }
-            
+
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
@@ -46,11 +45,11 @@ public class TokenController : ControllerBase
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "FindByName", ["User not found."] }
+                        { "FindByNameAsync", ["User not found."] }
                     }
                 });
             }
-
+            
             if (user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
             {
                 return Forbid();
@@ -66,11 +65,11 @@ public class TokenController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
+                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -112,7 +111,7 @@ public class TokenController : ControllerBase
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "FindByName", ["User not found."] }
+                        { "FindByNameAsync", ["User not found."] }
                     }
                 });
             }
@@ -123,11 +122,11 @@ public class TokenController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
+                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }

@@ -1,5 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Disclone.API;
 using Disclone.API.Data;
 using Disclone.API.DTOs;
 using Disclone.API.Interfaces;
@@ -28,7 +28,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = true;
-}).AddEntityFrameworkStores<DatabaseContext>();
+}).AddErrorDescriber<IdentityErrors>().AddEntityFrameworkStores<DatabaseContext>();
 
 // Configures authentication and authorization.
 builder.Services.AddAuthentication(options =>
@@ -51,7 +51,7 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]!))
         };
-        // Retrieves access token from cookie in every request.
+        // Retrieves access and refresh tokens from cookie in every request.
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -72,6 +72,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
+    // Configures ModelState error to be in line with ErrorResponseDTO.
     options.InvalidModelStateResponseFactory = context => new BadRequestObjectResult(new ErrorResponseDTO
     {
         Errors = context.ModelState.ToDictionary(kv => kv.Key,

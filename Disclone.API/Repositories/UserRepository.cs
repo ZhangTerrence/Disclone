@@ -15,7 +15,6 @@ public class UserRepository : IUserRepository
         _context = context;
     }
     
-
     public async Task<IEnumerable<ApplicationUser>> GetUsers()
     {
         return await _context.Users.ToListAsync();

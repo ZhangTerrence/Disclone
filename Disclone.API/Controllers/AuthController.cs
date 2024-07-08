@@ -14,8 +14,8 @@ namespace Disclone.API.Controllers;
 [Route("/api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public AuthController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
     {
@@ -33,7 +33,7 @@ public class AuthController : ControllerBase
             {
                 return BadRequest();
             }
- 
+
             var userExists = await _userManager.FindByNameAsync(body.UserName);
             if (userExists is not null)
             {
@@ -41,7 +41,7 @@ public class AuthController : ControllerBase
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "FindByName", ["Username has already been taken."] }
+                        { "FindByNameAsync", ["Username has already been taken."] }
                     }
                 });
             }
@@ -58,11 +58,11 @@ public class AuthController : ControllerBase
             var createdUser = await _userManager.CreateAsync(user, body.Password);
             if (!createdUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "CreateUser", createdUser.Errors.Select(e => e.Description) }
+                        { "CreateAsync", createdUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -70,11 +70,11 @@ public class AuthController : ControllerBase
             var assignedUser = await _userManager.AddToRoleAsync(user, "User");
             if (!assignedUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "AssignUser", assignedUser.Errors.Select(e => e.Description) }
+                        { "AddToRoleAsync", assignedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -93,11 +93,11 @@ public class AuthController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
+                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
@@ -138,7 +138,7 @@ public class AuthController : ControllerBase
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "FindByName", ["User not found"] } 
+                        { "FindByNameAsync", ["User not found."] }
                     }
                 });
             }
@@ -150,7 +150,7 @@ public class AuthController : ControllerBase
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "ValidateCredentials", ["Invalid username or password."] }
+                        { "CheckPasswordAsync", ["Invalid username or password."] }
                     }
                 });
             }
@@ -169,11 +169,11 @@ public class AuthController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return StatusCode(500, new ErrorResponseDTO
+                return BadRequest(new ErrorResponseDTO
                 {
                     Errors = new Dictionary<string, IEnumerable<string>>
                     {
-                        { "SaveUpdatedUser", savedUser.Errors.Select(e => e.Description) }
+                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
                     }
                 });
             }
