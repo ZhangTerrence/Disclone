@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Disclone.API.Data.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20240701210827_Friendships")]
+    [Migration("20240710163758_Friendships")]
     partial class Friendships
     {
         /// <inheritdoc />
@@ -25,7 +25,31 @@ namespace Disclone.API.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Disclone.API.Models.ApplicationUser", b =>
+            modelBuilder.Entity("Disclone.API.Models.Friendship", b =>
+                {
+                    b.Property<Guid>("FriendshipId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UserAId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserBId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("FriendshipId");
+
+                    b.HasIndex("UserAId");
+
+                    b.HasIndex("UserBId");
+
+                    b.ToTable("Friendships", (string)null);
+                });
+
+            modelBuilder.Entity("Disclone.API.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -49,12 +73,12 @@ namespace Disclone.API.Data.Migrations
                     b.Property<DateTime>("DateCreated")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2024, 7, 1, 21, 8, 26, 695, DateTimeKind.Utc).AddTicks(3433));
+                        .HasDefaultValue(new DateTime(2024, 7, 10, 16, 37, 58, 31, DateTimeKind.Utc).AddTicks(8144));
 
                     b.Property<DateTime>("DateModified")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2024, 7, 1, 21, 8, 26, 695, DateTimeKind.Utc).AddTicks(3725));
+                        .HasDefaultValue(new DateTime(2024, 7, 10, 16, 37, 58, 31, DateTimeKind.Utc).AddTicks(8498));
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -115,25 +139,6 @@ namespace Disclone.API.Data.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("Disclone.API.Models.Friendship", b =>
-                {
-                    b.Property<Guid>("UserAId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserBId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("UserAId", "UserBId");
-
-                    b.HasIndex("UserBId");
-
-                    b.ToTable("Friendship", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -163,13 +168,13 @@ namespace Disclone.API.Data.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("7234e45a-1807-40e1-b76c-dfe7010fbefb"),
+                            Id = new Guid("2ea2dd56-c4be-4098-8b71-452126a12395"),
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
-                            Id = new Guid("9d1dba7b-4d4e-43c8-8e83-0aa5d520e243"),
+                            Id = new Guid("24e748d0-272a-4b68-ac38-d0c8392f22ac"),
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         });
@@ -280,17 +285,15 @@ namespace Disclone.API.Data.Migrations
 
             modelBuilder.Entity("Disclone.API.Models.Friendship", b =>
                 {
-                    b.HasOne("Disclone.API.Models.ApplicationUser", "UserA")
-                        .WithMany("Requesters")
+                    b.HasOne("Disclone.API.Models.User", "UserA")
+                        .WithMany("Friendships")
                         .HasForeignKey("UserAId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Disclone.API.Models.ApplicationUser", "UserB")
-                        .WithMany("Requestees")
+                    b.HasOne("Disclone.API.Models.User", "UserB")
+                        .WithMany("FriendshipsOf")
                         .HasForeignKey("UserBId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("UserA");
 
@@ -308,7 +311,7 @@ namespace Disclone.API.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Disclone.API.Models.ApplicationUser", null)
+                    b.HasOne("Disclone.API.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -317,7 +320,7 @@ namespace Disclone.API.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Disclone.API.Models.ApplicationUser", null)
+                    b.HasOne("Disclone.API.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -332,7 +335,7 @@ namespace Disclone.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Disclone.API.Models.ApplicationUser", null)
+                    b.HasOne("Disclone.API.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -341,18 +344,18 @@ namespace Disclone.API.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Disclone.API.Models.ApplicationUser", null)
+                    b.HasOne("Disclone.API.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Disclone.API.Models.ApplicationUser", b =>
+            modelBuilder.Entity("Disclone.API.Models.User", b =>
                 {
-                    b.Navigation("Requestees");
+                    b.Navigation("Friendships");
 
-                    b.Navigation("Requesters");
+                    b.Navigation("FriendshipsOf");
                 });
 #pragma warning restore 612, 618
         }

@@ -4,6 +4,7 @@ using Disclone.API.Data;
 using Disclone.API.DTOs;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
+using Disclone.API.Repositories;
 using Disclone.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +21,7 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 });
 
 // Configures ASP.NET Core Identity.
-builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 {
     options.User.RequireUniqueEmail = true;
     options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";

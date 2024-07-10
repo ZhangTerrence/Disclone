@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Disclone.API.Data;
 
-public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+public class DatabaseContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
     public DatabaseContext(DbContextOptions options) : base(options)
     {
@@ -18,7 +18,7 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<ApplicationUser>(e => e.ToTable("Users"));
+        builder.Entity<User>(e => e.ToTable("Users"));
         builder.Entity<IdentityRole<Guid>>(e => e.ToTable("Roles"));
         builder.Entity<IdentityUserRole<Guid>>(e => e.ToTable("UserRoles"));
         builder.Entity<IdentityUserClaim<Guid>>(e => e.ToTable("UserClaims"));
@@ -41,7 +41,7 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser, IdentityRole<G
             }
         ]);
 
-        new ApplicationUserConfiguration().Configure(builder.Entity<ApplicationUser>());
+        new UserConfiguration().Configure(builder.Entity<User>());
         new FriendshipConfiguration().Configure(builder.Entity<Friendship>());
     }
 }

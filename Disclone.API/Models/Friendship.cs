@@ -2,16 +2,18 @@ namespace Disclone.API.Models;
 
 public enum FriendshipStatus
 {
-    PENDING,
-    FRIENDS,
-    BLOCKED
+    Pending,
+    Friends,
+    Blocked
 }
 
 public class Friendship
 {
-    public required Guid UserAId { get; set; }
-    public required ApplicationUser UserA { get; set; }
-    public required Guid UserBId { get; set; }
-    public required ApplicationUser UserB { get; set; }
-    public required FriendshipStatus Status { get; set; }
+    public Guid FriendshipId { get; set; }
+    public Guid? UserAId { get; set; }
+    public Guid? UserBId { get; set; }
+    public FriendshipStatus Status { get; set; }
+
+    public User? UserA { get; set; }
+    public User? UserB { get; set; }
 }

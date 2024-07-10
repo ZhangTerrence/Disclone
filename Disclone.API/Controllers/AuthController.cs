@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using Disclone.API.DTOs;
 using Disclone.API.DTOs.Auth;
 using Disclone.API.Interfaces;
 using Disclone.API.Models;
+using Disclone.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +15,9 @@ namespace Disclone.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly ITokenService _tokenService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<User> _userManager;
 
-    public AuthController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+    public AuthController(UserManager<User> userManager, ITokenService tokenService)
     {
         _userManager = userManager;
         _tokenService = tokenService;
@@ -37,53 +37,26 @@ public class AuthController : ControllerBase
             var userExists = await _userManager.FindByNameAsync(body.UserName);
             if (userExists is not null)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "FindByNameAsync", ["Username has already been taken."] }
-                    }
-                });
+                return BadRequest(ErrorResponseDTO.New(["FindByNameAsync"], [["Username has already been taken."]]));
             }
 
-            var user = new ApplicationUser
-            {
-                UserName = body.UserName,
-                Email = body.Email,
-                About = "",
-                DateCreated = DateTime.Now.ToUniversalTime(),
-                DateModified = DateTime.Now.ToUniversalTime()
-            };
+            var user = body.ToUser();
 
             var createdUser = await _userManager.CreateAsync(user, body.Password);
             if (!createdUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "CreateAsync", createdUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return BadRequest(ErrorResponseDTO.New(["CreateAsync"],
+                    [createdUser.Errors.Select(e => e.Description)]));
             }
 
             var assignedUser = await _userManager.AddToRoleAsync(user, "User");
             if (!assignedUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "AddToRoleAsync", assignedUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return BadRequest(ErrorResponseDTO.New(["AddToRoleAsync"],
+                    [assignedUser.Errors.Select(e => e.Description)]));
             }
 
-            var accessToken = _tokenService.GenerateAccessToken(new List<Claim>
-            {
-                new(ClaimTypes.Name, body.UserName),
-                new(ClaimTypes.Role, "User")
-            });
+            var accessToken = _tokenService.GenerateAccessToken(_tokenService.GenerateClaims(body.UserName, "User"));
             var refreshToken = _tokenService.GenerateRefreshToken();
             _tokenService.GenerateCookiesFromTokens(HttpContext, accessToken, refreshToken);
 
@@ -93,30 +66,15 @@ public class AuthController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return StatusCode(500,
+                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(new CredentialsResponseDTO
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken
-            });
+            return Ok(CredentialsResponseDTO.New(accessToken, refreshToken));
         }
         catch (Exception e)
         {
-            return StatusCode(500, new ErrorResponseDTO
-            {
-                Errors = new Dictionary<string, IEnumerable<string>>
-                {
-                    { e.Source ?? "UnknownSource", [e.Message] }
-                }
-            });
+            return StatusCode(500, ErrorResponseDTO.New([e.Source], [[e.Message]]));
         }
     }
 
@@ -134,32 +92,16 @@ public class AuthController : ControllerBase
             var user = await _userManager.FindByNameAsync(body.UserName);
             if (user is null)
             {
-                return NotFound(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "FindByNameAsync", ["User not found."] }
-                    }
-                });
+                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
             }
 
             var validatedCredentials = await _userManager.CheckPasswordAsync(user, body.Password);
             if (!validatedCredentials)
             {
-                return Unauthorized(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "CheckPasswordAsync", ["Invalid username or password."] }
-                    }
-                });
+                return Unauthorized(ErrorResponseDTO.New(["CheckPasswordAsync"], [["Invalid username or password."]]));
             }
 
-            var accessToken = _tokenService.GenerateAccessToken(new List<Claim>
-            {
-                new(ClaimTypes.Name, body.UserName),
-                new(ClaimTypes.Role, "User")
-            });
+            var accessToken = _tokenService.GenerateAccessToken(_tokenService.GenerateClaims(body.UserName, "User"));
             var refreshToken = _tokenService.GenerateRefreshToken();
             _tokenService.GenerateCookiesFromTokens(HttpContext, accessToken, refreshToken);
 
@@ -169,30 +111,15 @@ public class AuthController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return StatusCode(500,
+                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(new CredentialsResponseDTO
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken
-            });
+            return Ok(CredentialsResponseDTO.New(accessToken, refreshToken));
         }
         catch (Exception e)
         {
-            return StatusCode(500, new ErrorResponseDTO
-            {
-                Errors = new Dictionary<string, IEnumerable<string>>
-                {
-                    { e.Source ?? "UnknownSource", [e.Message] }
-                }
-            });
+            return StatusCode(500, ErrorResponseDTO.New([e.Source], [[e.Message]]));
         }
     }
 }

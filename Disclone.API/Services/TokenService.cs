@@ -18,6 +18,15 @@ public class TokenService : ITokenService
         _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]!));
     }
 
+    public List<Claim> GenerateClaims(string userName, string role)
+    {
+        return
+        [
+            new Claim(ClaimTypes.Name, userName),
+            new Claim(ClaimTypes.Role, role)
+        ];
+    }
+
     public string GenerateAccessToken(IEnumerable<Claim> claims)
     {
         var tokenDescriptor = new SecurityTokenDescriptor

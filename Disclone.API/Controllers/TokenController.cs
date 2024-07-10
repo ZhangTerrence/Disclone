@@ -13,9 +13,9 @@ namespace Disclone.API.Controllers;
 public class TokenController : ControllerBase
 {
     private readonly ITokenService _tokenService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<User> _userManager;
 
-    public TokenController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+    public TokenController(UserManager<User> userManager, ITokenService tokenService)
     {
         _userManager = userManager;
         _tokenService = tokenService;
@@ -32,7 +32,7 @@ public class TokenController : ControllerBase
             {
                 return Unauthorized();
             }
-            
+
             if (HttpContext.Items["Refresh"] is not string refreshToken)
             {
                 return Unauthorized();
@@ -41,15 +41,9 @@ public class TokenController : ControllerBase
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
-                return NotFound(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "FindByNameAsync", ["User not found."] }
-                    }
-                });
+                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
             }
-            
+
             if (user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
             {
                 return Forbid();
@@ -65,30 +59,15 @@ public class TokenController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return StatusCode(500,
+                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(new CredentialsResponseDTO
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+            return Ok(CredentialsResponseDTO.New(newAccessToken, newRefreshToken));
         }
         catch (Exception e)
         {
-            return StatusCode(500, new ErrorResponseDTO
-            {
-                Errors = new Dictionary<string, IEnumerable<string>>
-                {
-                    { e.Source ?? "UnknownSource", [e.Message] }
-                }
-            });
+            return StatusCode(500, ErrorResponseDTO.New([e.Source], [[e.Message]]));
         }
     }
 
@@ -107,13 +86,7 @@ public class TokenController : ControllerBase
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
-                return NotFound(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "FindByNameAsync", ["User not found."] }
-                    }
-                });
+                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
             }
 
             user.RefreshToken = null;
@@ -122,26 +95,15 @@ public class TokenController : ControllerBase
             var savedUser = await _userManager.UpdateAsync(user);
             if (!savedUser.Succeeded)
             {
-                return BadRequest(new ErrorResponseDTO
-                {
-                    Errors = new Dictionary<string, IEnumerable<string>>
-                    {
-                        { "UpdateAsync", savedUser.Errors.Select(e => e.Description) }
-                    }
-                });
+                return StatusCode(500,
+                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
             return NoContent();
         }
         catch (Exception e)
         {
-            return StatusCode(500, new ErrorResponseDTO
-            {
-                Errors = new Dictionary<string, IEnumerable<string>>
-                {
-                    { e.Source ?? "UnknownSource", [e.Message] }
-                }
-            });
+            return StatusCode(500, ErrorResponseDTO.New([e.Source], [[e.Message]]));
         }
     }
 }
