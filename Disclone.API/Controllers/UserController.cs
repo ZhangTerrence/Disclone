@@ -16,10 +16,10 @@ public class UserController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly IUserRepository _userRepository;
 
-    public UserController(IUserRepository userRepository, UserManager<User> userManager)
+    public UserController(UserManager<User> userManager, IUserRepository userRepository)
     {
-        _userRepository = userRepository;
         _userManager = userManager;
+        _userRepository = userRepository;
     }
 
     [HttpGet]
@@ -29,7 +29,7 @@ public class UserController : ControllerBase
         try
         {
             var users = await _userRepository.GetUsers();
-            
+
             return Ok(users.Select(user => user.ToUserResponseDTO()));
         }
         catch (Exception e)
@@ -48,9 +48,11 @@ public class UserController : ControllerBase
             var user = await _userRepository.GetUserByName(userName);
             if (user is null)
             {
-                return NotFound(ErrorResponseDTO.New(["GetUserByName"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserRepository.GetUserByName"], [["User not found."]]));
             }
             
+            Console.WriteLine(user.Friendships.FirstOrDefault()?.UserB?.UserName ?? "Null");
+
             return Ok(user.ToUserResponseDTO());
         }
         catch (Exception e)
@@ -74,19 +76,19 @@ public class UserController : ControllerBase
             var requester = await _userManager.FindByIdAsync(body.RequesterId);
             if (requester is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
 
             var requestee = await _userManager.FindByIdAsync(body.RequesteeId);
             if (requestee is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
 
             var friendship = await _userRepository.GetFriendship(requester, requestee);
             if (friendship is not null)
             {
-                return BadRequest(ErrorResponseDTO.New(["GetFriendship"],
+                return BadRequest(ErrorResponseDTO.New(["UserRepository.GetFriendship"],
                     [["Friend request has already been sent."]]));
             }
 
@@ -114,19 +116,19 @@ public class UserController : ControllerBase
             var userA = await _userManager.FindByIdAsync(body.UserAId);
             if (userA is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
 
             var userB = await _userManager.FindByIdAsync(body.UserBId);
             if (userB is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
 
             var friendship = await _userRepository.GetFriendship(userA, userB);
             if (friendship is null)
             {
-                return NotFound(ErrorResponseDTO.New(["GetFriendship"], [["No friend request found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserRepository.GetFriendship"], [["No friend request found."]]));
             }
 
             await _userRepository.UpdateFriendship(userA, userB, body.Status);
@@ -153,19 +155,19 @@ public class UserController : ControllerBase
             var userA = await _userManager.FindByIdAsync(body.UserAId);
             if (userA is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
 
             var userB = await _userManager.FindByIdAsync(body.UserBId);
             if (userB is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByIdAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByIdAsync"], [["User not found."]]));
             }
-            
+
             var friendship = await _userRepository.GetFriendship(userA, userB);
             if (friendship is null)
             {
-                return NotFound(ErrorResponseDTO.New(["GetFriendship"], [["No friend request found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserRepository.GetFriendship"], [["No friend request found."]]));
             }
 
             await _userRepository.DeleteFriendship(userA, userB);

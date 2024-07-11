@@ -13,6 +13,8 @@ public class DatabaseContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     }
 
     public DbSet<Friendship> Friendships { get; set; }
+    public DbSet<Guild> Guilds { get; set; }
+    public DbSet<Subscription> Subscriptions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -43,5 +45,7 @@ public class DatabaseContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 
         new UserConfiguration().Configure(builder.Entity<User>());
         new FriendshipConfiguration().Configure(builder.Entity<Friendship>());
+        new GuildConfiguration().Configure(builder.Entity<Guild>());
+        new SubscriptionConfiguration().Configure(builder.Entity<Subscription>());
     }
 }

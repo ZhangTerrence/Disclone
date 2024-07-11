@@ -12,4 +12,6 @@ public class User : IdentityUser<Guid>
 
     public ICollection<Friendship> Friendships { get; set; } = [];
     public ICollection<Friendship> FriendshipsOf { get; set; } = [];
+    public ICollection<Guild> OwnedGuilds { get; set; } = [];
+    public ICollection<Subscription> Guilds { get; set; } = [];
 }

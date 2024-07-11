@@ -30,7 +30,7 @@ public static class MapperService
             DateModified = user.DateModified,
             Friends = user.Friendships
                 .Where(e => e.Status == FriendshipStatus.Friends)
-                .Select(e => e.UserB!.UserName!)
+                .Select(e => e.UserB.UserName!)
                 .ToList()
         };
     }

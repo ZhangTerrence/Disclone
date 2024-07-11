@@ -23,10 +23,8 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetUserByName(string userName)
     {
-        var x = await _context.Users
-            .Include(e => e.Friendships)
-            .ToListAsync();
-        return x.FirstOrDefault(e => string.Equals(e.UserName!, userName, StringComparison.CurrentCultureIgnoreCase));
+        var users = await GetUsers();
+        return users.FirstOrDefault(e => e.NormalizedUserName == userName.ToUpper());
     }
 
     public async Task<IEnumerable<Friendship>?> GetFriendship(User userA, User userB)
@@ -35,7 +33,7 @@ public class UserRepository : IUserRepository
             .Where(e => (e.UserAId == userA.Id && e.UserBId == userB.Id) ||
                         (e.UserAId == userB.Id && e.UserBId == userA.Id))
             .ToListAsync();
-        
+
         return friendship.Count != 2 ? null : friendship.Take(2);
     }
 
@@ -53,7 +51,7 @@ public class UserRepository : IUserRepository
             UserA = userB,
             UserB = userA
         });
-        
+
         await _context.SaveChangesAsync();
     }
 
@@ -69,7 +67,7 @@ public class UserRepository : IUserRepository
         {
             entity.Status = status;
         }
-        
+
         await _context.SaveChangesAsync();
     }
 
@@ -80,12 +78,12 @@ public class UserRepository : IUserRepository
         {
             return;
         }
-        
+
         foreach (var entity in friendship)
         {
             _context.Friendships.Remove(entity);
         }
-        
+
         await _context.SaveChangesAsync();
     }
 }

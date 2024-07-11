@@ -10,6 +10,7 @@ public record UpdateFriendshipRequestDTO
 
     [Required(ErrorMessage = "UserB id is required.")]
     public required string UserBId { get; init; }
-    
+
+    [Required(ErrorMessage = "Status is required.")]
     public required FriendshipStatus Status { get; init; }
 }

@@ -17,10 +17,10 @@ public class AuthController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly UserManager<User> _userManager;
 
-    public AuthController(UserManager<User> userManager, ITokenService tokenService)
+    public AuthController(ITokenService tokenService, UserManager<User> userManager)
     {
-        _userManager = userManager;
         _tokenService = tokenService;
+        _userManager = userManager;
     }
 
     [HttpPost]
@@ -37,7 +37,8 @@ public class AuthController : ControllerBase
             var userExists = await _userManager.FindByNameAsync(body.UserName);
             if (userExists is not null)
             {
-                return BadRequest(ErrorResponseDTO.New(["FindByNameAsync"], [["Username has already been taken."]]));
+                return BadRequest(ErrorResponseDTO.New(["UserManager.FindByNameAsync"],
+                    [["Username has already been taken."]]));
             }
 
             var user = body.ToUser();
@@ -45,14 +46,14 @@ public class AuthController : ControllerBase
             var createdUser = await _userManager.CreateAsync(user, body.Password);
             if (!createdUser.Succeeded)
             {
-                return BadRequest(ErrorResponseDTO.New(["CreateAsync"],
+                return BadRequest(ErrorResponseDTO.New(["UserManager.CreateAsync"],
                     [createdUser.Errors.Select(e => e.Description)]));
             }
 
             var assignedUser = await _userManager.AddToRoleAsync(user, "User");
             if (!assignedUser.Succeeded)
             {
-                return BadRequest(ErrorResponseDTO.New(["AddToRoleAsync"],
+                return BadRequest(ErrorResponseDTO.New(["UserManager.AddToRoleAsync"],
                     [assignedUser.Errors.Select(e => e.Description)]));
             }
 
@@ -67,10 +68,14 @@ public class AuthController : ControllerBase
             if (!savedUser.Succeeded)
             {
                 return StatusCode(500,
-                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
+                    ErrorResponseDTO.New(["UserManager.UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(CredentialsResponseDTO.New(accessToken, refreshToken));
+            return Ok(new CredentialsResponseDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            });
         }
         catch (Exception e)
         {
@@ -92,13 +97,14 @@ public class AuthController : ControllerBase
             var user = await _userManager.FindByNameAsync(body.UserName);
             if (user is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByNameAsync"], [["User not found."]]));
             }
 
             var validatedCredentials = await _userManager.CheckPasswordAsync(user, body.Password);
             if (!validatedCredentials)
             {
-                return Unauthorized(ErrorResponseDTO.New(["CheckPasswordAsync"], [["Invalid username or password."]]));
+                return Unauthorized(ErrorResponseDTO.New(["UserManager.CheckPasswordAsync"],
+                    [["Invalid username or password."]]));
             }
 
             var accessToken = _tokenService.GenerateAccessToken(_tokenService.GenerateClaims(body.UserName, "User"));
@@ -112,10 +118,14 @@ public class AuthController : ControllerBase
             if (!savedUser.Succeeded)
             {
                 return StatusCode(500,
-                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
+                    ErrorResponseDTO.New(["UserManager.UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(CredentialsResponseDTO.New(accessToken, refreshToken));
+            return Ok(new CredentialsResponseDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            });
         }
         catch (Exception e)
         {

@@ -15,14 +15,14 @@ public class TokenController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly UserManager<User> _userManager;
 
-    public TokenController(UserManager<User> userManager, ITokenService tokenService)
+    public TokenController(ITokenService tokenService, UserManager<User> userManager)
     {
-        _userManager = userManager;
         _tokenService = tokenService;
+        _userManager = userManager;
     }
 
     [HttpPost]
-    [Authorize(Roles = "User, Admin")]
+    [Authorize]
     [Route("refresh")]
     public async Task<IActionResult> RefreshToken()
     {
@@ -41,7 +41,7 @@ public class TokenController : ControllerBase
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByNameAsync"], [["User not found."]]));
             }
 
             if (user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
@@ -60,10 +60,14 @@ public class TokenController : ControllerBase
             if (!savedUser.Succeeded)
             {
                 return StatusCode(500,
-                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
+                    ErrorResponseDTO.New(["UserManager.UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
-            return Ok(CredentialsResponseDTO.New(newAccessToken, newRefreshToken));
+            return Ok(new CredentialsResponseDTO
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken
+            });
         }
         catch (Exception e)
         {
@@ -86,7 +90,7 @@ public class TokenController : ControllerBase
             var user = await _userManager.FindByNameAsync(User.Identity.Name);
             if (user is null)
             {
-                return NotFound(ErrorResponseDTO.New(["FindByNameAsync"], [["User not found."]]));
+                return NotFound(ErrorResponseDTO.New(["UserManager.FindByNameAsync"], [["User not found."]]));
             }
 
             user.RefreshToken = null;
@@ -96,7 +100,7 @@ public class TokenController : ControllerBase
             if (!savedUser.Succeeded)
             {
                 return StatusCode(500,
-                    ErrorResponseDTO.New(["UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
+                    ErrorResponseDTO.New(["UserManager.UpdateAsync"], [savedUser.Errors.Select(e => e.Description)]));
             }
 
             return NoContent();

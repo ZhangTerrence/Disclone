@@ -12,6 +12,9 @@ public class FriendshipConfiguration : IEntityTypeConfiguration<Friendship>
 
         // Configures primary key.
         builder.HasKey(e => e.FriendshipId);
+        
+        // Configures properties.
+        builder.Property(e => e.Status).IsRequired().HasDefaultValue(FriendshipStatus.Pending);
 
         // Configures relations.
         builder
